@@ -1,6 +1,6 @@
-# TripMate AI
+# Trip Planner AI
 
-TripMate AI is a multi-agent travel-planning application built with FastAPI, LangGraph, Groq, PostgreSQL, Tavily, and AviationStack. It accepts a natural-language travel request, gathers flight and hotel information, creates an itinerary, and returns a formatted travel plan.
+Trip Planner AI is a multi-agent travel-planning application built with FastAPI, LangGraph, Groq, PostgreSQL, Tavily, and AviationStack. It accepts a natural-language travel request, gathers flight and hotel information, creates an itinerary, and returns a formatted travel plan.
 
 ## Features
 
