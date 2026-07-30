@@ -93,7 +93,15 @@ def flight_agent(state: TravelState):
 # =========================
 
 def hotel_agent(state: TravelState):
-    query = f"Best hotels for {state['user_query']}"
+    user_query = state["user_query"]
+
+    query = (
+        f"Find real hotels located only in the destination mentioned in this "
+        f"travel request: {user_query}. "
+        f"Return hotel name, destination city, approximate nightly price, "
+        f"rating, and source URL. Do not include hotels from the origin."
+    )
+
     hotel_results = tavily_search(query)
 
     return {

@@ -92,6 +92,14 @@ COUNTRY_MAIN_AIRPORT = {
 
 
 CITY_MAIN_AIRPORT = {
+    "tokyo": ["NRT", "HND"],
+    "osaka": ["KIX", "ITM"],
+    "delhi": ["DEL"],
+    "mumbai": ["BOM"],
+    "kolkata": ["CCU"],
+    "chennai": ["MAA"],
+    "bangalore": ["BLR"],
+    "bengaluru": ["BLR"],
     "dhaka": "DAC",
     "delhi": "DEL",
     "new delhi": "DEL",
@@ -387,6 +395,22 @@ def parse_route(query: str):
         arr_iata = resolve_location_to_iata(dest_text)
 
         return dep_iata, arr_iata
+    # Pattern: "Japan trip from India"
+    match = re.search(
+        r"\b(.+?)\s+(?:trip|travel|flight|flights)\s+from\s+(.+?)"
+        r"(?:\s+(?:on|for|under|including|with|in|at)\b|[.!?]|$)",
+        q_lower,
+    )
+
+    if match:
+        destination_text = match.group(1)
+        origin_text = match.group(2)
+        dep_iata = resolve_location_to_iata(origin_text)
+        arr_iata = resolve_location_to_iata(destination_text)
+
+        if dep_iata and arr_iata:
+            return dep_iata, arr_iata
+    
 
     # Pattern: flights from X
     match = re.search(r"\bfrom\s+(.+?)(?:[.!?]|$)", q_lower)
