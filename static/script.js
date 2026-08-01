@@ -444,6 +444,41 @@ function updateSelectedHotelNotice() {
     notice.classList.add("has-selection");
 }
 
+function buildFlightComparison() {
+    if (!selectedFlightOffer) return {};
+    const finalOffer = selectedReturnOffer || selectedFlightOffer;
+    const comparisonOffers = selectedReturnOffer ? currentReturnOffers : currentFlightOffers;
+    const prices = comparisonOffers.map(offer => offer.price).filter(Number.isFinite);
+    const durations = comparisonOffers.map(offer => offer.total_duration_minutes).filter(Number.isFinite);
+    const lowestPrice = prices.length ? Math.min(...prices) : null;
+    const fastestDuration = durations.length ? Math.min(...durations) : null;
+    return {
+        selected_total_price: finalOffer.price,
+        lowest_available_total_price: lowestPrice,
+        selected_is_cheapest: Number.isFinite(finalOffer.price) && finalOffer.price === lowestPrice,
+        selected_outbound_duration_minutes: selectedFlightOffer.total_duration_minutes,
+        selected_return_duration_minutes: selectedReturnOffer?.total_duration_minutes || null,
+        selected_leg_is_fastest: Number.isFinite(finalOffer.total_duration_minutes) && finalOffer.total_duration_minutes === fastestDuration,
+        comparison_scope: selectedReturnOffer ? "return options for the selected outbound" : "displayed one-way options"
+    };
+}
+
+function buildHotelComparison() {
+    if (!selectedHotel) return {};
+    const prices = currentHotels.map(hotel => hotel.nightly_price).filter(Number.isFinite);
+    const ratings = currentHotels.map(hotel => hotel.rating).filter(Number.isFinite);
+    const lowestPrice = prices.length ? Math.min(...prices) : null;
+    const highestRating = ratings.length ? Math.max(...ratings) : null;
+    return {
+        selected_nightly_price: selectedHotel.nightly_price,
+        lowest_available_nightly_price: lowestPrice,
+        selected_is_cheapest: Number.isFinite(selectedHotel.nightly_price) && selectedHotel.nightly_price === lowestPrice,
+        selected_rating: selectedHotel.rating,
+        highest_available_rating: highestRating,
+        selected_is_highest_rated: Number.isFinite(selectedHotel.rating) && selectedHotel.rating === highestRating
+    };
+}
+
 async function searchHotels(event) {
     event.preventDefault();
     hideHotelError();
@@ -520,10 +555,11 @@ async function sendMessage() {
                         outbound: selectedFlightOffer,
                         return: selectedReturnOffer,
                         total_price: (selectedReturnOffer || selectedFlightOffer).price,
-                        currency: (selectedReturnOffer || selectedFlightOffer).currency
+                        currency: (selectedReturnOffer || selectedFlightOffer).currency,
+                        comparison: buildFlightComparison()
                     }
                     : null,
-                selected_hotel: selectedHotel ? {hotel: selectedHotel, search: currentHotelSearch} : null
+                selected_hotel: selectedHotel ? {hotel: selectedHotel, search: currentHotelSearch, comparison: buildHotelComparison()} : null
             })
         });
         const data = await response.json();

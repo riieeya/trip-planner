@@ -69,6 +69,7 @@ class TravelState(TypedDict):
     llm_calls: int
     selected_flight: dict | None
     selected_hotel: dict | None
+    budget_results: str
 
 
 # =========================
@@ -114,6 +115,7 @@ def flight_agent(state: TravelState):
                 "total_round_trip_price": selected.get("total_price") or outbound.get("price"),
                 "currency": selected.get("currency") or outbound.get("currency") or "INR",
                 "price_notice": "Current search price; may change on the booking provider site.",
+                "comparison": selected.get("comparison") or {},
             },
             ensure_ascii=False,
             indent=2,
@@ -164,6 +166,7 @@ def hotel_agent(state: TravelState):
                 "free_cancellation": hotel.get("free_cancellation"),
                 "source_link": hotel.get("link"),
                 "price_notice": "Current search price; may change on the booking provider site.",
+                "comparison": selected.get("comparison") or {},
             },
             ensure_ascii=False,
             indent=2,
@@ -186,6 +189,54 @@ def hotel_agent(state: TravelState):
 
 
 # =========================
+# Deterministic Budget Agent
+# =========================
+
+def budget_agent(state: TravelState):
+    selected_flight = state.get("selected_flight") or {}
+    selected_hotel = state.get("selected_hotel") or {}
+    hotel = selected_hotel.get("hotel") or {}
+    hotel_search = selected_hotel.get("search") or {}
+
+    flight_total = selected_flight.get("total_price")
+    flight_currency = selected_flight.get("currency")
+    nights = hotel_search.get("nights")
+    nightly_price = hotel.get("nightly_price")
+    hotel_total = hotel.get("total_price")
+    if hotel_total is None and nightly_price is not None and nights is not None:
+        hotel_total = nightly_price * nights
+
+    hotel_currency = hotel.get("currency")
+    shared_currency = flight_currency or hotel_currency or "INR"
+    same_currency = not flight_currency or not hotel_currency or flight_currency == hotel_currency
+    confirmed_subtotal = None
+    if same_currency and flight_total is not None and hotel_total is not None:
+        confirmed_subtotal = flight_total + hotel_total
+
+    budget = {
+        "data_status": "DETERMINISTIC_CONFIRMED_BUDGET",
+        "currency": shared_currency,
+        "flight_total": flight_total,
+        "hotel_nightly_price": nightly_price,
+        "hotel_nights": nights,
+        "hotel_total": hotel_total,
+        "confirmed_subtotal": confirmed_subtotal,
+        "excluded_from_confirmed_subtotal": [
+            "food", "local_transport", "activities", "insurance", "visa", "personal_expenses"
+        ],
+        "calculation_note": (
+            "Confirmed subtotal is flight total plus hotel total. Hotel total uses the provider "
+            "total when available; otherwise it is nightly price multiplied by nights."
+        ),
+    }
+    return {
+        "budget_results": json.dumps(budget, ensure_ascii=False, indent=2),
+        "messages": [AIMessage(content="Confirmed budget calculated.")],
+        "llm_calls": state.get("llm_calls", 0),
+    }
+
+
+# =========================
 # Itinerary Agent
 # =========================
 
@@ -202,6 +253,9 @@ Flight Results:
 Hotel Results:
 {state['hotel_results']}
 
+Confirmed Budget Calculation:
+{state['budget_results']}
+
 Make the itinerary practical, budget-aware, and easy to follow.
 
 Flight-data rules:
@@ -215,6 +269,11 @@ Hotel-data rules:
 - Use only hotel facts explicitly present in Hotel Results.
 - Never invent or estimate hotel prices, ratings, availability, amenities, or cancellation terms.
 - If no live hotel is selected, clearly say that accommodation is not confirmed and omit hotel costs.
+
+Budget rules:
+- Treat Confirmed Budget Calculation as fixed arithmetic.
+- Never modify or recalculate its confirmed figures.
+- Clearly separate confirmed costs from estimated food, transport, activities, visa, insurance, and personal spending.
 """
 
     response = llm.invoke([
@@ -247,6 +306,9 @@ Flights:
 Hotels:
 {state['hotel_results']}
 
+Confirmed Budget:
+{state['budget_results']}
+
 Itinerary:
 {state['itinerary']}
 
@@ -256,7 +318,7 @@ Format the final answer beautifully using these sections:
 2. Flight Information
 3. Hotel Suggestions
 4. Day-by-Day Itinerary
-5. Estimated Budget
+5. Budget: Confirmed Costs vs Estimated Extras
 6. Final Recommendations
 
 Important:
@@ -268,6 +330,9 @@ Important:
 - Mention that live prices may change on the booking provider's website.
 - Never invent or estimate hotel details or prices.
 - If Hotels says NO_LIVE_HOTEL_SELECTED, state that no live hotel was selected and omit hotel costs from the budget.
+- Copy confirmed budget figures exactly. Never change, round, or silently combine them with estimates.
+- Label food, local transport, activities, insurance, visa, and personal expenses as estimates.
+- Use comparison fields to justify cheapest, fastest, highest-rated, or best-value claims.
 - Keep the response useful for real travel planning.
 """
 
@@ -290,12 +355,14 @@ graph = StateGraph(TravelState)
 
 graph.add_node("flight_agent", flight_agent)
 graph.add_node("hotel_agent", hotel_agent)
+graph.add_node("budget_agent", budget_agent)
 graph.add_node("itinerary_agent", itinerary_agent)
 graph.add_node("final_agent", final_agent)
 
 graph.add_edge(START, "flight_agent")
 graph.add_edge("flight_agent", "hotel_agent")
-graph.add_edge("hotel_agent", "itinerary_agent")
+graph.add_edge("hotel_agent", "budget_agent")
+graph.add_edge("budget_agent", "itinerary_agent")
 graph.add_edge("itinerary_agent", "final_agent")
 graph.add_edge("final_agent", END)
 
@@ -358,6 +425,7 @@ def run_travel_agent(
             "llm_calls": 0,
             "selected_flight": selected_flight,
             "selected_hotel": selected_hotel,
+            "budget_results": "",
         },
         config=config
     )
@@ -371,4 +439,5 @@ def run_travel_agent(
         "hotel_results": result.get("hotel_results", ""),
         "itinerary": result.get("itinerary", ""),
         "llm_calls": result.get("llm_calls", 0),
+        "budget_results": result.get("budget_results", ""),
     }
