@@ -316,7 +316,9 @@ async function loadReturnFlights(outboundOffer) {
 
 function updateSelectedFlightNotice() {
     const notice = document.getElementById("selectedFlightNotice");
+    const summary = document.getElementById("flightSummaryText");
     if (!selectedFlightOffer) {
+        summary.textContent = "Not selected";
         notice.textContent = "No live flight selected. The AI will not estimate or invent a fare.";
         notice.classList.remove("has-selection");
         return;
@@ -324,6 +326,7 @@ function updateSelectedFlightNotice() {
 
     const airline = selectedFlightOffer.airlines?.join(", ") || "Selected airline";
     if (currentFlightSearch?.return_date && !selectedReturnOffer) {
+        summary.textContent = "Choose return flight";
         notice.textContent = `${airline} outbound selected. Now select a return flight to complete the round trip.`;
         notice.classList.remove("has-selection");
         return;
@@ -331,6 +334,7 @@ function updateSelectedFlightNotice() {
 
     const finalOffer = selectedReturnOffer || selectedFlightOffer;
     const price = formatPrice(finalOffer.price, finalOffer.currency);
+    summary.textContent = `${currentFlightSearch?.origin} → ${currentFlightSearch?.destination} · ${price}`;
     notice.textContent = currentFlightSearch?.return_date
         ? `Round trip selected at ${price}. Both flight legs will ground your itinerary.`
         : `${airline} selected at ${price}. This live offer will ground your itinerary.`;
@@ -435,11 +439,14 @@ function renderHotelCards(mode = "best") {
 
 function updateSelectedHotelNotice() {
     const notice = document.getElementById("selectedHotelNotice");
+    const summary = document.getElementById("hotelSummaryText");
     if (!selectedHotel) {
+        summary.textContent = "Not selected";
         notice.textContent = "No live hotel selected. The AI will not estimate or invent accommodation costs.";
         notice.classList.remove("has-selection");
         return;
     }
+    summary.textContent = `${selectedHotel.name} · ${formatPrice(selectedHotel.nightly_price, selectedHotel.currency)}/night`;
     notice.textContent = `${selectedHotel.name} selected at ${formatPrice(selectedHotel.nightly_price, selectedHotel.currency)} per night. This sourced result will ground your itinerary.`;
     notice.classList.add("has-selection");
 }

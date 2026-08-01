@@ -18,19 +18,28 @@
     </div>
 
     <main class="app-container">
+        <nav class="top-nav"><a class="brand" href="#">TripMate<span>AI</span></a><span class="nav-status"><i></i>Live travel search</span></nav>
         <section class="hero-section">
-            <div class="badge">✈️ Trip Planner AI — Live comparisons and AI trip planning</div>
-            <h1>Plan Your Perfect Trip with AI</h1>
-            <p>Compare current flight prices, discover hotels, and generate a complete travel itinerary.</p>
+            <div class="badge">Your smarter way to travel</div>
+            <h1>One trip. Every detail.<br><span>Planned beautifully.</span></h1>
+            <p>Compare real flight and hotel prices, choose what works for you, and turn it into a personalised itinerary.</p>
         </section>
+
+        <div class="journey-steps" aria-label="Planning progress">
+            <a href="#flightSearchTitle"><b>1</b><span><strong>Flights</strong><small>Compare routes</small></span></a>
+            <i></i><a href="#hotelSearchTitle"><b>2</b><span><strong>Stay</strong><small>Choose a hotel</small></span></a>
+            <i></i><a href="#itineraryTitle"><b>3</b><span><strong>Plan</strong><small>Build itinerary</small></span></a>
+            <i></i><a href="#resultSection"><b>4</b><span><strong>Ready</strong><small>Review your trip</small></span></a>
+        </div>
 
         <section class="flight-search-card" aria-labelledby="flightSearchTitle">
             <div class="card-header">
                 <div>
+                    <p class="section-kicker">Step 1 · Find your route</p>
                     <h2 id="flightSearchTitle">Compare live flight prices</h2>
-                    <p>Search current Google Flights results before generating your itinerary.</p>
+                    <p>Choose from current flight options and lock in the journey that suits you.</p>
                 </div>
-                <div class="data-source-pill">Google Flights via SerpApi</div>
+                <div class="data-source-pill"><i></i>Live prices</div>
             </div>
 
             <form id="flightSearchForm" class="flight-search-form">
@@ -102,8 +111,8 @@
 
         <section class="hotel-search-card" aria-labelledby="hotelSearchTitle">
             <div class="card-header">
-                <div><h2 id="hotelSearchTitle">Compare live hotel prices</h2><p>Search sourced accommodation prices for your travel dates.</p></div>
-                <div class="data-source-pill">Google Hotels via SerpApi</div>
+                <div><p class="section-kicker">Step 2 · Choose your stay</p><h2 id="hotelSearchTitle">Find the right place to stay</h2><p>Compare current prices, guest ratings and useful amenities.</p></div>
+                <div class="data-source-pill"><i></i>Live prices</div>
             </div>
             <form id="hotelSearchForm" class="hotel-search-form">
                 <label class="form-field"><span>Destination</span><input id="hotelDestination" maxlength="100" required></label>
@@ -131,10 +140,17 @@
         <section class="planner-card">
             <div class="card-header">
                 <div>
-                    <h2>Build your complete itinerary</h2>
-                    <p>Example: Plan a complete 7-day Japan trip from India under ₹2 lakh.</p>
+                    <p class="section-kicker">Step 3 · Make it yours</p>
+                    <h2 id="itineraryTitle">Create your personal itinerary</h2>
+                    <p>Tell us what you enjoy and we’ll build the day-by-day plan around your selections.</p>
                 </div>
-                <div class="status-pill"><span class="status-dot"></span>Online</div>
+                <div class="status-pill"><span class="status-dot"></span>AI ready</div>
+            </div>
+
+            <div class="trip-summary-strip">
+                <div><span>✈</span><p><small>Flight</small><strong id="flightSummaryText">Not selected</strong></p></div>
+                <div><span>⌂</span><p><small>Hotel</small><strong id="hotelSummaryText">Not selected</strong></p></div>
+                <div><span>₹</span><p><small>Budget</small><strong>Calculated with your plan</strong></p></div>
             </div>
 
             <div class="input-area">
@@ -160,8 +176,8 @@
         <section id="resultSection" class="result-section hidden">
             <div class="result-header">
                 <div>
-                    <h2>Your AI Travel Plan</h2>
-                    <p id="threadInfo">Thread ID: -</p>
+                    <p class="section-kicker">Step 4 · Your trip</p><h2>Your personalised travel plan</h2>
+                    <p id="threadInfo" class="hidden">Thread ID: -</p>
                 </div>
                 <div class="result-actions">
                     <button class="copy-btn" onclick="copyResult()">Copy</button>
@@ -177,7 +193,7 @@
         <section id="errorBox" class="error-box hidden"></section>
     </main>
 
-    <footer>Built with FastAPI, LangGraph, Groq, PostgreSQL, Tavily and SerpApi</footer>
+    <footer><strong>TripMate AI</strong><span>Plan confidently. Travel beautifully.</span></footer>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="/static/script.js"></script>
