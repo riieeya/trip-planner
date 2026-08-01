@@ -20,9 +20,29 @@
     <main class="app-container">
         <nav class="top-nav"><a class="brand" href="#">Trip Planner <span>AI</span></a><span class="nav-status"><i></i>Live prices available</span></nav>
         <section class="hero-section">
-            <div class="badge">Flights, stays and itineraries</div>
-            <h1>Plan your trip with<br><span>real choices.</span></h1>
-            <p>Search current flight and hotel prices, compare the options, then build one practical itinerary around your selections.</p>
+            <div class="hero-copy">
+                <div class="badge">Flights, stays and itineraries</div>
+                <h1>Plan your trip with<br> <span>real choices.</span></h1>
+                <p>Search current flight and hotel prices, compare the options, then build one practical itinerary around your selections.</p>
+                <a class="hero-action" href="#flightSearchTitle">Start planning <span aria-hidden="true">→</span></a>
+            </div>
+            <div class="hero-workspace" aria-label="Trip planning workspace preview">
+                <div class="workspace-topline"><span>Your trip workspace</span><small><i></i>Live data</small></div>
+                <div class="route-illustration" aria-hidden="true">
+                    <span class="route-point route-start"></span>
+                    <svg viewBox="0 0 420 88" preserveAspectRatio="none">
+                        <path d="M8 67 C105 8, 280 8, 412 58" />
+                    </svg>
+                    <span class="route-plane">✈</span>
+                    <span class="route-point route-end"></span>
+                </div>
+                <div class="workspace-items">
+                    <div><span class="workspace-icon">01</span><p><small>Compare</small><strong>Live flight options</strong></p><b>Search</b></div>
+                    <div><span class="workspace-icon">02</span><p><small>Choose</small><strong>Your preferred stay</strong></p><b>Select</b></div>
+                    <div><span class="workspace-icon">03</span><p><small>Build</small><strong>One complete plan</strong></p><b>Generate</b></div>
+                </div>
+                <div class="workspace-total"><p><small>Included in your plan</small><strong>One clear estimated total</strong></p><span>₹</span></div>
+            </div>
         </section>
 
         <div class="journey-steps" aria-label="Planning progress">
