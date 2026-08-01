@@ -11,6 +11,7 @@ from typing import TypedDict, Annotated
 import operator
 import uuid
 import json
+from datetime import date
 
 import psycopg
 from psycopg.rows import dict_row
@@ -195,12 +196,23 @@ def hotel_agent(state: TravelState):
 def budget_agent(state: TravelState):
     selected_flight = state.get("selected_flight") or {}
     selected_hotel = state.get("selected_hotel") or {}
+    flight_search = selected_flight.get("search") or {}
     hotel = selected_hotel.get("hotel") or {}
     hotel_search = selected_hotel.get("search") or {}
 
     flight_total = selected_flight.get("total_price")
     flight_currency = selected_flight.get("currency")
     nights = hotel_search.get("nights")
+    if nights is None and flight_search.get("departure_date") and flight_search.get("return_date"):
+        try:
+            nights = (
+                date.fromisoformat(flight_search["return_date"])
+                - date.fromisoformat(flight_search["departure_date"])
+            ).days
+        except (TypeError, ValueError):
+            nights = None
+    adults = hotel_search.get("adults") or flight_search.get("adults") or 1
+    trip_days = nights + 1 if nights is not None else None
     nightly_price = hotel.get("nightly_price")
     hotel_total = hotel.get("total_price")
     if hotel_total is None and nightly_price is not None and nights is not None:
@@ -213,6 +225,24 @@ def budget_agent(state: TravelState):
     if same_currency and flight_total is not None and hotel_total is not None:
         confirmed_subtotal = flight_total + hotel_total
 
+    daily_rates = {
+        "food_per_adult": 1500,
+        "local_transport_per_adult": 750,
+        "activities_per_adult": 1000,
+    }
+    food_estimate = daily_rates["food_per_adult"] * adults * trip_days if trip_days else None
+    transport_estimate = daily_rates["local_transport_per_adult"] * adults * trip_days if trip_days else None
+    activities_estimate = daily_rates["activities_per_adult"] * adults * trip_days if trip_days else None
+    miscellaneous_estimate = 2500 * adults if trip_days else None
+    contingency = round(confirmed_subtotal * 0.05) if confirmed_subtotal is not None else None
+    estimated_extras_total = None
+    projected_trip_total = None
+    extras = [food_estimate, transport_estimate, activities_estimate, miscellaneous_estimate, contingency]
+    if all(value is not None for value in extras):
+        estimated_extras_total = sum(extras)
+    if confirmed_subtotal is not None and estimated_extras_total is not None:
+        projected_trip_total = confirmed_subtotal + estimated_extras_total
+
     budget = {
         "data_status": "DETERMINISTIC_CONFIRMED_BUDGET",
         "currency": shared_currency,
@@ -221,12 +251,26 @@ def budget_agent(state: TravelState):
         "hotel_nights": nights,
         "hotel_total": hotel_total,
         "confirmed_subtotal": confirmed_subtotal,
-        "excluded_from_confirmed_subtotal": [
-            "food", "local_transport", "activities", "insurance", "visa", "personal_expenses"
-        ],
+        "travellers": adults,
+        "trip_days": trip_days,
+        "estimated_extras": {
+            "food": food_estimate,
+            "local_transport": transport_estimate,
+            "activities": activities_estimate,
+            "miscellaneous_personal": miscellaneous_estimate,
+            "contingency_5_percent_of_confirmed": contingency,
+            "total": estimated_extras_total,
+        },
+        "projected_estimated_trip_total": projected_trip_total,
+        "baseline_assumptions_in_inr": daily_rates,
+        "not_included": ["visa", "travel_insurance"],
         "calculation_note": (
             "Confirmed subtotal is flight total plus hotel total. Hotel total uses the provider "
             "total when available; otherwise it is nightly price multiplied by nights."
+        ),
+        "estimate_note": (
+            "Projected total is a planning estimate using stated INR daily assumptions. "
+            "Visa and travel insurance are excluded because they depend on destination and traveller."
         ),
     }
     return {
@@ -274,6 +318,8 @@ Budget rules:
 - Treat Confirmed Budget Calculation as fixed arithmetic.
 - Never modify or recalculate its confirmed figures.
 - Clearly separate confirmed costs from estimated food, transport, activities, visa, insurance, and personal spending.
+- Show projected_estimated_trip_total prominently as the overall estimated trip cost when it is available.
+- State the daily assumptions and clearly note that visa and travel insurance are excluded.
 """
 
     response = llm.invoke([
@@ -332,6 +378,8 @@ Important:
 - If Hotels says NO_LIVE_HOTEL_SELECTED, state that no live hotel was selected and omit hotel costs from the budget.
 - Copy confirmed budget figures exactly. Never change, round, or silently combine them with estimates.
 - Label food, local transport, activities, insurance, visa, and personal expenses as estimates.
+- Display projected_estimated_trip_total as a single prominent "Estimated Total Trip Cost" figure.
+- State that visa and travel insurance are not included in that total.
 - Use comparison fields to justify cheapest, fastest, highest-rated, or best-value claims.
 - Keep the response useful for real travel planning.
 """
