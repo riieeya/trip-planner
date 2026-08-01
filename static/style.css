@@ -1027,3 +1027,196 @@ footer strong { color: #94a3b8; margin-right: 10px; }
     .journey-steps > i { margin: 0 7px; }
     .trip-summary-strip { grid-template-columns: 1fr; }
 }
+
+/* Restrained product styling */
+body {
+    background: #0c1620;
+}
+
+.page-bg,
+.gradient-circle {
+    display: none;
+}
+
+.app-container {
+    max-width: 1160px;
+    padding-top: 0;
+}
+
+.top-nav {
+    margin-bottom: 0;
+    padding: 22px 0;
+    border-bottom: 1px solid #263442;
+}
+
+.brand {
+    font-size: 1.08rem;
+    font-weight: 750;
+    letter-spacing: -.02em;
+}
+
+.brand span {
+    color: #f4b860;
+}
+
+.nav-status i,
+.data-source-pill i {
+    width: 6px;
+    height: 6px;
+    background: #4ade80;
+    box-shadow: none;
+}
+
+.hero-section {
+    max-width: 800px;
+    margin: 0;
+    padding: 70px 0 52px;
+    text-align: left;
+}
+
+.hero-section .badge {
+    margin: 0 0 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #f4b860;
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.hero-section h1 {
+    max-width: 760px;
+    margin: 0;
+    color: #f8fafc;
+    font-size: clamp(2.75rem, 5.5vw, 4.8rem);
+    line-height: 1.02;
+    letter-spacing: -.055em;
+    text-align: left;
+    background: none;
+    -webkit-background-clip: initial;
+    -webkit-text-fill-color: initial;
+}
+
+.hero-section h1 span {
+    color: #9fc5e8;
+    -webkit-text-fill-color: #9fc5e8;
+}
+
+.hero-section p {
+    max-width: 650px;
+    margin: 22px 0 0;
+    color: #a9b5c1;
+    font-size: 1rem;
+    line-height: 1.7;
+    text-align: left;
+}
+
+.journey-steps {
+    margin-bottom: 24px;
+    padding: 14px 0;
+    border: 0;
+    border-top: 1px solid #263442;
+    border-bottom: 1px solid #263442;
+    border-radius: 0;
+    background: transparent;
+    backdrop-filter: none;
+}
+
+.journey-steps b {
+    width: 26px;
+    height: 26px;
+    border: 1px solid #3a4b5c;
+    border-radius: 50%;
+    background: transparent;
+    color: #d3dce5;
+}
+
+.journey-steps > i {
+    background: #263442;
+}
+
+.flight-search-card,
+.hotel-search-card,
+.planner-card,
+.flight-results-section,
+.hotel-results-section,
+.result-section {
+    border-color: #2a3948;
+    border-radius: 12px;
+    background: #111e2b;
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+.section-kicker,
+.eyebrow {
+    color: #f4b860 !important;
+    letter-spacing: .08em;
+}
+
+.data-source-pill,
+.status-pill {
+    border-color: #315069;
+    border-radius: 6px;
+    background: #142838;
+    color: #b8d5ea;
+}
+
+.form-field input,
+.form-field select,
+.input-area textarea {
+    border-color: #344555;
+    border-radius: 7px;
+    background: #0b1520;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.input-area textarea:focus {
+    border-color: #6aa6d8;
+    box-shadow: 0 0 0 3px rgba(106, 166, 216, .12);
+}
+
+.flight-search-btn,
+#sendBtn,
+.download-btn {
+    border-radius: 7px;
+    background: #2f78b7;
+    box-shadow: none;
+}
+
+.flight-search-btn:hover,
+#sendBtn:hover,
+.download-btn:hover {
+    background: #3d88c7;
+    transform: none;
+}
+
+.trip-summary-strip > div {
+    border-color: #2d3d4c;
+    border-radius: 7px;
+    background: #0d1924;
+}
+
+.trip-summary-strip > div > span {
+    border-radius: 5px;
+    background: #182b3b;
+    color: #a8cce9;
+}
+
+.quick-prompts button,
+.sort-btn,
+.copy-btn {
+    border-radius: 6px;
+}
+
+@media (max-width: 760px) {
+    .top-nav { margin-bottom: 0; }
+    .hero-section { padding: 48px 0 38px; }
+    .hero-section h1 { font-size: clamp(2.2rem, 10.5vw, 3rem); }
+    .hero-section h1 br { display: none; }
+    .journey-steps { padding: 12px 0; }
+}
