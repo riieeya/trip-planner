@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: trip-planner-ai
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SERPAPI_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: DEFAULT_ORIGIN_IATA
+        value: DEL

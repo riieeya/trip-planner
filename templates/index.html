@@ -2,16 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Trip Planner AI</title>
-
     <link rel="stylesheet" href="/static/style.css">
 </head>
-
 <body>
-
+    <div id="serverWakeNotice" class="server-wake-notice hidden" role="status">
+        <span class="loader"></span>
+        <div><strong>Free server is waking up</strong><p>This can take up to a minute. Your request will retry automatically.</p></div>
+    </div>
     <div class="page-bg">
         <div class="gradient-circle circle-1"></div>
         <div class="gradient-circle circle-2"></div>
@@ -19,111 +18,168 @@
     </div>
 
     <main class="app-container">
-
         <section class="hero-section">
-            <div class="badge">
-                ✈️ Trip Planner AI — A Multi-Agent Travel Planner with LangGraph
-            </div>
-
-            <h1>
-                Plan Your Perfect Trip with AI
-            </h1>
-
-            <p>
-                Search flights, discover hotels, and generate a complete travel itinerary using a multi-agent LangGraph system.
-            </p>
+            <div class="badge">✈️ Trip Planner AI — Live comparisons and AI trip planning</div>
+            <h1>Plan Your Perfect Trip with AI</h1>
+            <p>Compare current flight prices, discover hotels, and generate a complete travel itinerary.</p>
         </section>
 
-        <section class="planner-card">
-
+        <section class="flight-search-card" aria-labelledby="flightSearchTitle">
             <div class="card-header">
                 <div>
-                    <h2>Where do you want to go?</h2>
-                    <p>
-                        Example: Plan a complete 7 days Japan trip from Bangladesh under 2 lakhs.
-                    </p>
+                    <h2 id="flightSearchTitle">Compare live flight prices</h2>
+                    <p>Search current Google Flights results before generating your itinerary.</p>
                 </div>
+                <div class="data-source-pill">Google Flights via SerpApi</div>
+            </div>
 
-                <div class="status-pill">
-                    <span class="status-dot"></span>
-                    Online
+            <form id="flightSearchForm" class="flight-search-form">
+                <label class="form-field">
+                    <span>From</span>
+                    <input id="flightOrigin" maxlength="80" aria-label="Origin city, country, or airport" required>
+                </label>
+                <label class="form-field">
+                    <span>To</span>
+                    <input id="flightDestination" maxlength="80" aria-label="Destination city, country, or airport" required>
+                </label>
+                <label class="form-field">
+                    <span>Departure</span>
+                    <input id="flightDepartureDate" type="date" required>
+                </label>
+                <label class="form-field">
+                    <span>Return <small>(optional)</small></span>
+                    <input id="flightReturnDate" type="date">
+                </label>
+                <label class="form-field">
+                    <span>Adults</span>
+                    <input id="flightAdults" type="number" min="1" max="9" value="1" required>
+                </label>
+                <label class="form-field">
+                    <span>Cabin</span>
+                    <select id="flightTravelClass">
+                        <option value="1">Economy</option>
+                        <option value="2">Premium economy</option>
+                        <option value="3">Business</option>
+                        <option value="4">First</option>
+                    </select>
+                </label>
+                <button id="flightSearchBtn" class="flight-search-btn" type="submit">
+                    <span id="flightSearchBtnText">Search flights</span>
+                    <span id="flightSearchLoader" class="loader hidden"></span>
+                </button>
+            </form>
+        </section>
+
+        <section id="flightResultsSection" class="flight-results-section hidden" aria-live="polite">
+            <div class="flight-results-header">
+                <div>
+                    <p class="eyebrow">Live comparison</p>
+                    <h2 id="flightResultsTitle">Available flights</h2>
+                    <p id="flightResultsMeta" class="flight-results-meta"></p>
                 </div>
+                <div class="sort-controls" aria-label="Sort flight results">
+                    <button class="sort-btn active" type="button" data-sort="best">Best</button>
+                    <button class="sort-btn" type="button" data-sort="cheapest">Cheapest</button>
+                    <button class="sort-btn" type="button" data-sort="fastest">Fastest</button>
+                </div>
+            </div>
+            <div id="flightCards" class="flight-cards"></div>
+            <div id="returnFlightSection" class="return-flight-section hidden">
+                <div class="return-flight-heading">
+                    <div>
+                        <p class="eyebrow">Choose your return</p>
+                        <h3 id="returnFlightTitle">Return flights</h3>
+                        <p id="returnFlightMeta" class="flight-results-meta"></p>
+                    </div>
+                    <span id="returnFlightLoader" class="return-loading hidden">Loading return options…</span>
+                </div>
+                <div id="returnFlightCards" class="flight-cards"></div>
+            </div>
+            <p id="flightDisclaimer" class="flight-disclaimer"></p>
+        </section>
+
+        <section id="flightErrorBox" class="error-box hidden" aria-live="assertive"></section>
+
+        <section class="hotel-search-card" aria-labelledby="hotelSearchTitle">
+            <div class="card-header">
+                <div><h2 id="hotelSearchTitle">Compare live hotel prices</h2><p>Search sourced accommodation prices for your travel dates.</p></div>
+                <div class="data-source-pill">Google Hotels via SerpApi</div>
+            </div>
+            <form id="hotelSearchForm" class="hotel-search-form">
+                <label class="form-field"><span>Destination</span><input id="hotelDestination" maxlength="100" required></label>
+                <label class="form-field"><span>Check-in</span><input id="hotelCheckIn" type="date" required></label>
+                <label class="form-field"><span>Check-out</span><input id="hotelCheckOut" type="date" required></label>
+                <label class="form-field"><span>Adults</span><input id="hotelAdults" type="number" min="1" max="9" value="2" required></label>
+                <button id="hotelSearchBtn" class="flight-search-btn" type="submit"><span id="hotelSearchBtnText">Search hotels</span><span id="hotelSearchLoader" class="loader hidden"></span></button>
+            </form>
+        </section>
+
+        <section id="hotelResultsSection" class="hotel-results-section hidden" aria-live="polite">
+            <div class="flight-results-header">
+                <div><p class="eyebrow">Live hotel comparison</p><h2 id="hotelResultsTitle">Available hotels</h2><p id="hotelResultsMeta" class="flight-results-meta"></p></div>
+                <div class="sort-controls">
+                    <button class="hotel-sort-btn sort-btn active" type="button" data-hotel-sort="best">Best value</button>
+                    <button class="hotel-sort-btn sort-btn" type="button" data-hotel-sort="cheapest">Cheapest</button>
+                    <button class="hotel-sort-btn sort-btn" type="button" data-hotel-sort="rating">Highest rated</button>
+                </div>
+            </div>
+            <div id="hotelCards" class="hotel-cards"></div>
+            <p id="hotelDisclaimer" class="flight-disclaimer"></p>
+        </section>
+        <section id="hotelErrorBox" class="error-box hidden" aria-live="assertive"></section>
+
+        <section class="planner-card">
+            <div class="card-header">
+                <div>
+                    <h2>Build your complete itinerary</h2>
+                    <p>Example: Plan a complete 7-day Japan trip from India under ₹2 lakh.</p>
+                </div>
+                <div class="status-pill"><span class="status-dot"></span>Online</div>
             </div>
 
             <div class="input-area">
-                <textarea
-                    id="userInput"
-                    placeholder="Plan a complete 7 days Japan trip including flights, hotels and sightseeing under 2 lakhs..."
-                ></textarea>
-
+                <textarea id="userInput" placeholder="Plan a complete 7-day Japan trip including hotels and sightseeing under ₹2 lakh..."></textarea>
                 <button id="sendBtn" onclick="sendMessage()">
                     <span id="btnText">Generate Plan</span>
                     <span id="btnLoader" class="loader hidden"></span>
                 </button>
             </div>
 
+            <p id="selectedFlightNotice" class="selected-flight-notice">
+                No live flight selected. The AI will not estimate or invent a fare.
+            </p>
+            <p id="selectedHotelNotice" class="selected-flight-notice">No live hotel selected. The AI will not estimate or invent accommodation costs.</p>
+
             <div class="quick-prompts">
-                <button onclick="setPrompt('Plan a complete 7 days Japan trip from India including flights, hotels and sightseeing under 2 lakhs.')">
-                    Japan Trip
-                </button>
-
-                <button onclick="setPrompt('Plan a 5 days Dubai trip from Delhi with flights, hotels and sightseeing.')">
-                    Dubai Trip
-                </button>
-
-                <button onclick="setPrompt('Plan a 7 days Thailand trip from India with budget hotels and sightseeing.')">
-                    Thailand Trip
-                </button>
-
-                <button onclick="setPrompt('Give me all country flight info.')">
-                    Global Flights
-                </button>
+                <button onclick="setPrompt('Plan a complete 7-day Japan trip from India including hotels and sightseeing under ₹2 lakh.')">Japan Trip</button>
+                <button onclick="setPrompt('Plan a 5-day Dubai trip from Delhi with hotels and sightseeing.')">Dubai Trip</button>
+                <button onclick="setPrompt('Plan a 7-day Thailand trip from India with budget hotels and sightseeing.')">Thailand Trip</button>
             </div>
-
         </section>
 
         <section id="resultSection" class="result-section hidden">
-
             <div class="result-header">
                 <div>
                     <h2>Your AI Travel Plan</h2>
                     <p id="threadInfo">Thread ID: -</p>
                 </div>
-
                 <div class="result-actions">
-                    <button class="copy-btn" onclick="copyResult()">
-                        Copy
-                    </button>
-
-                    <button class="download-btn" onclick="downloadPDF()">
-                        Download PDF
-                    </button>
+                    <button class="copy-btn" onclick="copyResult()">Copy</button>
+                    <button class="download-btn" onclick="downloadPDF()">Download PDF</button>
                 </div>
             </div>
-
             <div id="pdfContent" class="pdf-content">
                 <h1 class="pdf-title">AI Travel Plan</h1>
                 <div id="resultBox" class="result-box"></div>
             </div>
-
         </section>
 
         <section id="errorBox" class="error-box hidden"></section>
-
     </main>
 
-    <footer>
-        Built with FastAPI, LangGraph, Groq, PostgreSQL, Tavily and AviationStack
-    </footer>
-
-    <!-- Markdown Renderer -->
+    <footer>Built with FastAPI, LangGraph, Groq, PostgreSQL, Tavily and SerpApi</footer>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
-    <!-- PDF Download Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-    <!-- Your Custom JS -->
     <script src="/static/script.js"></script>
-
 </body>
 </html>
