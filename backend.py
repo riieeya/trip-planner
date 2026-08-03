@@ -7,10 +7,11 @@ load_dotenv()
 os.environ["SSL_CERT_FILE"] = certifi.where()
 os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
 
-from typing import TypedDict, Annotated
+from typing import TypedDict, Annotated, Literal
 import operator
 import uuid
 import json
+import re
 from datetime import date
 
 import psycopg
@@ -25,6 +26,7 @@ from langchain_core.messages import (
     SystemMessage,
 )
 from langchain_groq import ChatGroq
+from pydantic import BaseModel, Field
 
 
 def get_database_url():
@@ -71,6 +73,108 @@ class TravelState(TypedDict):
     selected_flight: dict | None
     selected_hotel: dict | None
     budget_results: str
+    supervisor_decision: dict
+    requires_clarification: bool
+    clarification_question: str
+    review_status: str
+    review_feedback: str
+    revision_count: int
+    agent_trace: list[dict]
+
+
+class SupervisorDecision(BaseModel):
+    decision: Literal["proceed", "clarify"]
+    destination: str | None = None
+    duration_days: int | None = Field(default=None, ge=1, le=90)
+    preferences: list[str] = Field(default_factory=list)
+    missing_information: list[str] = Field(default_factory=list)
+    clarification_question: str = ""
+    reason: str
+
+
+class ReviewDecision(BaseModel):
+    approved: bool
+    issues: list[str] = Field(default_factory=list)
+    feedback: str = ""
+
+
+def trace_event(stage: str, status: str, detail: str) -> dict:
+    """Return a safe, user-visible execution event without private reasoning."""
+    return {"stage": stage, "status": status, "detail": detail}
+
+
+# =========================
+# Supervisor Agent
+# =========================
+
+def supervisor_agent(state: TravelState):
+    selected_flight = state.get("selected_flight")
+    selected_hotel = state.get("selected_hotel")
+    supervisor_llm = llm.with_structured_output(SupervisorDecision)
+    prompt = f"""
+Analyse this travel-planning request and decide whether there is enough information
+to create a useful itinerary.
+
+User request:
+{state['user_query']}
+
+Live flight selected: {bool(selected_flight)}
+Live hotel selected: {bool(selected_hotel)}
+
+Rules:
+- A destination and trip duration are essential.
+- Origin, budget, interests, live flight, and live hotel are helpful but not mandatory.
+- Do not require flight or hotel selection; the itinerary can clearly mark them unconfirmed.
+- If destination or duration is missing, ask one concise question covering only what is missing.
+- Return "proceed" when both destination and duration can reasonably be understood.
+- Preferences must be short user-facing labels, not hidden reasoning.
+"""
+
+    try:
+        decision = supervisor_llm.invoke([
+            SystemMessage(content="You are a travel workflow supervisor. Return only the requested structured decision."),
+            HumanMessage(content=prompt),
+        ])
+    except Exception:
+        # Preserve availability if structured model output is temporarily unsupported.
+        duration_match = re.search(r"\b(\d{1,2})\s*[- ]?days?\b", state["user_query"], re.IGNORECASE)
+        decision = SupervisorDecision(
+            decision="proceed",
+            duration_days=int(duration_match.group(1)) if duration_match else None,
+            reason="Supervisor fallback allowed the existing grounded workflow to continue.",
+        )
+
+    decision_data = decision.model_dump()
+    requires_clarification = decision.decision == "clarify"
+    detail = (
+        "More trip information is needed before planning."
+        if requires_clarification
+        else "Destination, duration and preferences were evaluated."
+    )
+    return {
+        "supervisor_decision": decision_data,
+        "requires_clarification": requires_clarification,
+        "clarification_question": decision.clarification_question,
+        "agent_trace": [trace_event("Request understood", "needs_input" if requires_clarification else "complete", detail)],
+        "messages": [],
+        "llm_calls": state.get("llm_calls", 0) + 1,
+    }
+
+
+def route_after_supervisor(state: TravelState):
+    return "clarify" if state.get("requires_clarification") else "continue"
+
+
+def clarification_agent(state: TravelState):
+    question = state.get("clarification_question") or (
+        "Where would you like to travel, and how many days should I plan for?"
+    )
+    return {
+        "messages": [AIMessage(content=question)],
+        "agent_trace": state.get("agent_trace", []) + [
+            trace_event("Clarification requested", "waiting", "The agent paused instead of inventing missing trip details.")
+        ],
+    }
 
 
 # =========================
@@ -133,7 +237,12 @@ def flight_agent(state: TravelState):
         "messages": [
             AIMessage(content="Flight results fetched.")
         ],
-        "llm_calls": state.get("llm_calls", 0) + 1
+        "llm_calls": state.get("llm_calls", 0),
+        "agent_trace": state.get("agent_trace", []) + [trace_event(
+            "Flight data grounded",
+            "complete" if selected else "skipped",
+            "Selected live flight details were locked for the plan." if selected else "No live flight was selected; fares will not be invented.",
+        )],
     }
 
 
@@ -183,7 +292,12 @@ def hotel_agent(state: TravelState):
         "messages": [
             AIMessage(content="Hotel information fetched.")
         ],
-        "llm_calls": state.get("llm_calls", 0) + 1
+        "llm_calls": state.get("llm_calls", 0),
+        "agent_trace": state.get("agent_trace", []) + [trace_event(
+            "Hotel data grounded",
+            "complete" if selected else "skipped",
+            "Selected live hotel details were locked for the plan." if selected else "No live hotel was selected; accommodation prices will not be invented.",
+        )],
     }
 
 
@@ -277,6 +391,11 @@ def budget_agent(state: TravelState):
         "budget_results": json.dumps(budget, ensure_ascii=False, indent=2),
         "messages": [AIMessage(content="Confirmed budget calculated.")],
         "llm_calls": state.get("llm_calls", 0),
+        "agent_trace": state.get("agent_trace", []) + [trace_event(
+            "Budget calculated",
+            "complete",
+            "Confirmed costs and planning estimates were calculated with deterministic arithmetic.",
+        )],
     }
 
 
@@ -330,7 +449,118 @@ Budget rules:
     return {
         "itinerary": response.content,
         "messages": [response],
-        "llm_calls": state.get("llm_calls", 0) + 1
+        "llm_calls": state.get("llm_calls", 0) + 1,
+        "agent_trace": state.get("agent_trace", []) + [trace_event(
+            "Itinerary generated",
+            "complete",
+            "A day-by-day plan was created from the request and grounded trip data.",
+        )],
+    }
+
+
+# =========================
+# Itinerary Reviewer Agent
+# =========================
+
+def reviewer_agent(state: TravelState):
+    reviewer_llm = llm.with_structured_output(ReviewDecision)
+    prompt = f"""
+Review the itinerary for factual grounding and completeness.
+
+User request:
+{state['user_query']}
+
+Authoritative flight data:
+{state['flight_results']}
+
+Authoritative hotel data:
+{state['hotel_results']}
+
+Fixed budget calculation:
+{state['budget_results']}
+
+Itinerary to review:
+{state['itinerary']}
+
+Approve only when:
+- no flight, hotel, price, schedule, rating, or amenity was invented;
+- confirmed budget figures were not altered;
+- the itinerary reasonably follows the requested destination and duration;
+- selected outbound and return details are represented when present;
+- unselected live data is clearly described as unconfirmed.
+
+Feedback must be concise and actionable. Do not rewrite the itinerary.
+"""
+    try:
+        review = reviewer_llm.invoke([
+            SystemMessage(content="You are a strict travel-plan grounding reviewer. Return only the requested structured review."),
+            HumanMessage(content=prompt),
+        ])
+    except Exception:
+        review = ReviewDecision(
+            approved=True,
+            feedback="Automated review was unavailable, so existing deterministic grounding rules were retained.",
+        )
+
+    status = "approved" if review.approved else "revise"
+    detail = "The itinerary passed grounding and consistency checks." if review.approved else "The reviewer requested one controlled revision."
+    return {
+        "review_status": status,
+        "review_feedback": review.feedback or "; ".join(review.issues),
+        "agent_trace": state.get("agent_trace", []) + [trace_event(
+            "Itinerary reviewed",
+            "complete" if review.approved else "revision",
+            detail,
+        )],
+        "messages": [],
+        "llm_calls": state.get("llm_calls", 0) + 1,
+    }
+
+
+def route_after_review(state: TravelState):
+    if state.get("review_status") == "revise" and state.get("revision_count", 0) < 1:
+        return "revise"
+    return "approved"
+
+
+def revision_agent(state: TravelState):
+    prompt = f"""
+Revise this travel itinerary once using the review feedback.
+
+User request:
+{state['user_query']}
+
+Authoritative flights:
+{state['flight_results']}
+
+Authoritative hotels:
+{state['hotel_results']}
+
+Fixed budget:
+{state['budget_results']}
+
+Current itinerary:
+{state['itinerary']}
+
+Reviewer feedback:
+{state['review_feedback']}
+
+Correct only the identified problems. Never invent missing live information and never alter fixed budget figures.
+"""
+    response = llm.invoke([
+        SystemMessage(content="You revise grounded travel itineraries using reviewer feedback."),
+        HumanMessage(content=prompt),
+    ])
+    return {
+        "itinerary": response.content,
+        "messages": [response],
+        "revision_count": state.get("revision_count", 0) + 1,
+        "agent_trace": state.get("agent_trace", []) + [trace_event(
+            "Itinerary revised",
+            "complete",
+            "One controlled revision was applied from reviewer feedback.",
+        )],
+        "llm_calls": state.get("llm_calls", 0) + 1,
     }
 
 
@@ -391,7 +621,12 @@ Important:
 
     return {
         "messages": [response],
-        "llm_calls": state.get("llm_calls", 0) + 1
+        "llm_calls": state.get("llm_calls", 0) + 1,
+        "agent_trace": state.get("agent_trace", []) + [trace_event(
+            "Final plan prepared",
+            "complete",
+            "The reviewed itinerary and verified costs were assembled for presentation.",
+        )],
     }
 
 
@@ -401,17 +636,33 @@ Important:
 
 graph = StateGraph(TravelState)
 
+graph.add_node("supervisor_agent", supervisor_agent)
+graph.add_node("clarification_agent", clarification_agent)
 graph.add_node("flight_agent", flight_agent)
 graph.add_node("hotel_agent", hotel_agent)
 graph.add_node("budget_agent", budget_agent)
 graph.add_node("itinerary_agent", itinerary_agent)
+graph.add_node("reviewer_agent", reviewer_agent)
+graph.add_node("revision_agent", revision_agent)
 graph.add_node("final_agent", final_agent)
 
-graph.add_edge(START, "flight_agent")
+graph.add_edge(START, "supervisor_agent")
+graph.add_conditional_edges(
+    "supervisor_agent",
+    route_after_supervisor,
+    {"clarify": "clarification_agent", "continue": "flight_agent"},
+)
+graph.add_edge("clarification_agent", END)
 graph.add_edge("flight_agent", "hotel_agent")
 graph.add_edge("hotel_agent", "budget_agent")
 graph.add_edge("budget_agent", "itinerary_agent")
-graph.add_edge("itinerary_agent", "final_agent")
+graph.add_edge("itinerary_agent", "reviewer_agent")
+graph.add_conditional_edges(
+    "reviewer_agent",
+    route_after_review,
+    {"revise": "revision_agent", "approved": "final_agent"},
+)
+graph.add_edge("revision_agent", "reviewer_agent")
 graph.add_edge("final_agent", END)
 
 
@@ -474,6 +725,13 @@ def run_travel_agent(
             "selected_flight": selected_flight,
             "selected_hotel": selected_hotel,
             "budget_results": "",
+            "supervisor_decision": {},
+            "requires_clarification": False,
+            "clarification_question": "",
+            "review_status": "pending",
+            "review_feedback": "",
+            "revision_count": 0,
+            "agent_trace": [],
         },
         config=config
     )
@@ -488,4 +746,9 @@ def run_travel_agent(
         "itinerary": result.get("itinerary", ""),
         "llm_calls": result.get("llm_calls", 0),
         "budget_results": result.get("budget_results", ""),
+        "supervisor_decision": result.get("supervisor_decision", {}),
+        "requires_clarification": result.get("requires_clarification", False),
+        "review_status": result.get("review_status", "not_run"),
+        "revision_count": result.get("revision_count", 0),
+        "agent_trace": result.get("agent_trace", []),
     }

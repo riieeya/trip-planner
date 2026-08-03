@@ -104,6 +104,11 @@ async def travel_planner(request_data: TravelRequest):
                 "itinerary": result["itinerary"],
                 "llm_calls": result["llm_calls"],
                 "budget_results": result["budget_results"],
+                "supervisor_decision": result["supervisor_decision"],
+                "requires_clarification": result["requires_clarification"],
+                "review_status": result["review_status"],
+                "revision_count": result["revision_count"],
+                "agent_trace": result["agent_trace"],
             }
         )
     except Exception as exc:

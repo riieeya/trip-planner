@@ -196,13 +196,17 @@
         <section id="resultSection" class="result-section hidden">
             <div class="result-header">
                 <div>
-                    <p class="section-kicker">Step 4 · Your trip</p><h2>Your personalised travel plan</h2>
+                    <p id="resultKicker" class="section-kicker">Step 4 · Your trip</p><h2 id="resultTitle">Your personalised travel plan</h2>
                     <p id="threadInfo" class="hidden">Thread ID: -</p>
                 </div>
-                <div class="result-actions">
+                <div id="resultActions" class="result-actions">
                     <button class="copy-btn" onclick="copyResult()">Copy</button>
                     <button class="download-btn" onclick="downloadPDF()">Download PDF</button>
                 </div>
+            </div>
+            <div id="agentTrace" class="agent-trace hidden" aria-label="Agent activity">
+                <div class="agent-trace-heading"><div><small>Agent activity</small><strong>How this plan was prepared</strong></div><span>LangGraph workflow</span></div>
+                <ol id="agentTraceList"></ol>
             </div>
             <div id="pdfContent" class="pdf-content">
                 <h1 class="pdf-title">AI Travel Plan</h1>

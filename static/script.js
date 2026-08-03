@@ -524,13 +524,35 @@ async function searchHotels(event) {
     }
 }
 
-function showResult(answer, threadId) {
+function escapeHtml(value) {
+    return String(value).replace(/[&<>'"]/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "'": "&#39;",
+        '"': "&quot;"
+    })[character]);
+}
+
+function showResult(answer, threadId, agentTrace = [], requiresClarification = false) {
     latestAnswerMarkdown = answer;
     const resultSection = document.getElementById("resultSection");
     const resultBox = document.getElementById("resultBox");
+    const tracePanel = document.getElementById("agentTrace");
+    const traceList = document.getElementById("agentTraceList");
     resultBox.innerHTML = typeof marked !== "undefined" ? marked.parse(answer) : "";
     if (typeof marked === "undefined") resultBox.innerText = answer;
     document.getElementById("threadInfo").textContent = `Thread ID: ${threadId}`;
+    document.getElementById("resultKicker").textContent = requiresClarification ? "One detail needed" : "Step 4 · Your trip";
+    document.getElementById("resultTitle").textContent = requiresClarification ? "Help the agent complete your request" : "Your personalised travel plan";
+    document.getElementById("resultActions").classList.toggle("hidden", requiresClarification);
+    traceList.innerHTML = agentTrace.map(event => `
+        <li class="trace-${event.status || "complete"}">
+            <span aria-hidden="true"></span>
+            <div><strong>${escapeHtml(event.stage || "Workflow step")}</strong><small>${escapeHtml(event.detail || "Completed")}</small></div>
+        </li>
+    `).join("");
+    tracePanel.classList.toggle("hidden", !agentTrace.length);
     resultSection.classList.remove("hidden");
     resultSection.scrollIntoView({behavior: "smooth", block: "start"});
 }
@@ -573,7 +595,7 @@ async function sendMessage() {
         if (!response.ok || !data.success) throw new Error(data.error || "Something went wrong.");
         currentThreadId = data.thread_id;
         localStorage.setItem("travel_thread_id", currentThreadId);
-        showResult(data.answer, data.thread_id);
+        showResult(data.answer, data.thread_id, data.agent_trace || [], Boolean(data.requires_clarification));
     } catch (error) {
         showError(error.message);
     } finally {

@@ -1512,3 +1512,112 @@ body {
         font-size: 1.4rem;
     }
 }
+
+/* Safe, user-visible agent execution trace */
+.agent-trace {
+    margin: 20px 0 24px;
+    padding: 18px;
+    border: 1px solid #304353;
+    border-radius: 10px;
+    background: #0c1822;
+}
+
+.agent-trace-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #273847;
+}
+
+.agent-trace-heading > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.agent-trace-heading small {
+    color: #f4b860;
+    font-size: .64rem;
+    font-weight: 850;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.agent-trace-heading strong {
+    color: #e5edf4;
+    font-size: .9rem;
+}
+
+.agent-trace-heading > span {
+    padding: 6px 9px;
+    border: 1px solid #334b5e;
+    border-radius: 5px;
+    color: #8fa9bd;
+    font-size: .68rem;
+    font-weight: 750;
+}
+
+.agent-trace ol {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    margin: 0;
+    padding: 17px 0 0;
+    list-style: none;
+}
+
+.agent-trace li {
+    position: relative;
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 8px;
+    min-width: 0;
+    padding: 5px 14px 13px 0;
+}
+
+.agent-trace li > span {
+    position: relative;
+    z-index: 1;
+    width: 10px;
+    height: 10px;
+    margin-top: 3px;
+    border: 2px solid #0c1822;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 0 1px #4ade80;
+}
+
+.agent-trace li.trace-skipped > span { background: #708193; box-shadow: 0 0 0 1px #708193; }
+.agent-trace li.trace-needs_input > span,
+.agent-trace li.trace-waiting > span { background: #f4b860; box-shadow: 0 0 0 1px #f4b860; }
+.agent-trace li.trace-revision > span { background: #60a5fa; box-shadow: 0 0 0 1px #60a5fa; }
+
+.agent-trace li div {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.agent-trace li strong {
+    color: #dbe6ee;
+    font-size: .75rem;
+}
+
+.agent-trace li small {
+    color: #768b9d;
+    font-size: .66rem;
+    line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+    .agent-trace ol { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
+    .agent-trace { padding: 15px; }
+    .agent-trace-heading { align-items: flex-start; flex-direction: column; }
+    .agent-trace ol { grid-template-columns: 1fr; }
+}
