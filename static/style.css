@@ -1327,7 +1327,7 @@ body {
     stroke-dasharray: 5 6;
 }
 
-.route-point {
+.hero-route-point {
     position: absolute;
     z-index: 2;
     width: 9px;
@@ -1467,4 +1467,48 @@ body {
     .route-illustration { height: 82px; }
     .workspace-items > div { grid-template-columns: 32px 1fr; }
     .workspace-items b { display: none; }
+}
+
+@media (max-width: 480px) {
+    .flight-card {
+        gap: 16px;
+        padding: 18px 16px;
+    }
+
+    .flight-card-airline {
+        align-items: flex-start;
+    }
+
+    .airline-name {
+        overflow-wrap: anywhere;
+    }
+
+    .flight-route {
+        grid-template-columns: 62px minmax(90px, 1fr) 62px;
+        gap: 6px;
+        width: 100%;
+    }
+
+    .flight-route .route-point {
+        position: static;
+        min-width: 0;
+    }
+
+    .flight-route .route-point strong {
+        font-size: 1.05rem;
+    }
+
+    .flight-route .route-point span,
+    .flight-route .route-line span {
+        font-size: .68rem;
+        line-height: 1.35;
+    }
+
+    .flight-route .route-line b {
+        padding: 0 5px;
+    }
+
+    .flight-price strong {
+        font-size: 1.4rem;
+    }
 }
